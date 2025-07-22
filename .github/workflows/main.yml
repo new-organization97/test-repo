@@ -8,9 +8,7 @@ on:
         required: true
         type: choice
         options:
-          - Team: Create New Team
-          - Team Access: Add Team to Repository
-          - Team Members: Add User to Team
+          - create-team
           - delete-team
           - add-repo
           - remove-repo
