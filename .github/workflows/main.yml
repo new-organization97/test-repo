@@ -104,5 +104,5 @@ jobs:
           [[ "$REPO_PRIVATE" == "true" ]] && ARGS="$ARGS --repo-private"
 
           echo "▶ Running script: python3 scripts/github_admin.py $ARGS"
-          eval python3 scripts/git-manager.py $ARGS
+          eval python3 git-manager.py $ARGS
  
