@@ -84,7 +84,7 @@ jobs:
 
       - name: Run GitHub Admin Script
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_ADMIN_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
           ACTION: ${{ github.event.inputs.action }}
           ORG: ${{ github.event.inputs.org }}
           TEAM: ${{ github.event.inputs.team }}
