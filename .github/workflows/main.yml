@@ -22,7 +22,7 @@ on:
         required: true
         type: choice
         options:
-          - test-repo
+          - new-organization97
           - example-org
           - another-org
 
@@ -32,7 +32,10 @@ on:
 
       repo:
         description: 'Repository name (if applicable)'
-        required: false
+        required: true
+        type: choice
+        options: 
+        - test-repo
 
       user:
         description: 'GitHub username (not email!)'
@@ -67,19 +70,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🐍 Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      - name: 📦 Install dependencies
+      - name: Install dependencies
         run: |
           pip install -r requirements.txt || true
 
-      - name: 🔄 Run GitHub Admin Script
+      - name: Run GitHub Admin Script
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ADMIN_TOKEN }}
           ACTION: ${{ github.event.inputs.action }}
