@@ -295,7 +295,7 @@ def main():
     parser.add_argument("--org", help="GitHub organization name")
     parser.add_argument("--team", help="Team name")
     parser.add_argument("--repo", help="Repository name")
-    parser.add_argument("--user", help="GitHub username")
+    parser.add_argument("--user_email", help="User Email Address")
     parser.add_argument("--permission",
                        choices=["pull", "triage", "push", "maintain", "admin"],
                        help="Permission level for team access to repository")
