@@ -4,19 +4,18 @@ import sys
 import json
 import os
 import dotenv
-#from openpyxl import Workbook, load_workbook
-#from openpyxl.styles import Font
+from openpyxl import Workbook # Uncommented
+from openpyxl.styles import Font # Uncommented
 from datetime import datetime
 from typing import List, Optional
- 
- 
+
 dotenv.load_dotenv()
- 
+
 github_token = os.getenv("TOKEN")
 if not github_token:
     print("GITHUB_TOKEN environment variable is not set.")
     sys.exit(1)
- 
+
 class GitHubAPIManager:
     def __init__(self, token: str):
         self.token = token
@@ -26,11 +25,11 @@ class GitHubAPIManager:
             "Accept": "application/vnd.github.v3+json",
             "User-Agent": "GitHub-Manager-Script"
         }
- 
+
     def make_request(self, method: str, endpoint: str, data: dict = None) -> dict:
         """Make HTTP request to GitHub API"""
         url = f"{self.base_url}{endpoint}"
-       
+        
         try:
             if method.upper() == "GET":
                 response = requests.get(url, headers=self.headers)
@@ -42,63 +41,77 @@ class GitHubAPIManager:
                 response = requests.delete(url, headers=self.headers)
             else:
                 raise ValueError(f"Unsupported HTTP method: {method}")
-           
+            
             if response.status_code not in [200, 201, 204]:
                 error_msg = response.json().get('message', 'Unknown error') if response.text else 'No response'
-                print(f"❌ API Error ({response.status_code}): {error_msg}")
+                print(f"❌ API Error ({response.status_code}): {error_msg} for {endpoint}")
                 return None
-           
+            
             return response.json() if response.text else {}
-           
+            
         except requests.exceptions.RequestException as e:
             print(f"❌ Request failed: {str(e)}")
             return None
         except json.JSONDecodeError:
-            print(f"❌ Invalid JSON response")
+            print(f"❌ Invalid JSON response from {endpoint}")
             return None
- 
+
     def list_orgs(self) -> List[str]:
         """List organizations user is a member of"""
         response = self.make_request("GET", "/user/memberships/orgs")
         if response is None:
             return []
         return [org['organization']['login'] for org in response]
- 
+
     def list_teams(self, org: str) -> List[dict]:
         """List teams in an organization"""
-        response = self.make_request("GET", f"/orgs/{org}/teams")
-        if response is None:
-            return []
-        return response
- 
+        all_teams = []
+        page = 1
+        while True:
+            response = self.make_request("GET", f"/orgs/{org}/teams?page={page}&per_page=100")
+            if response is None:
+                break
+            if not response: # No more teams
+                break
+            all_teams.extend(response)
+            page += 1
+        return all_teams
+
     def list_repos(self, org: str) -> List[dict]:
         """List repositories in an organization"""
-        response = self.make_request("GET", f"/orgs/{org}/repos")
-        if response is None:
-            return []
-        return response
- 
+        all_repos = []
+        page = 1
+        while True:
+            response = self.make_request("GET", f"/orgs/{org}/repos?page={page}&per_page=100")
+            if response is None:
+                break
+            if not response: # No more repos
+                break
+            all_repos.extend(response)
+            page += 1
+        return all_repos
+
     def create_team(self, org: str, team_name: str, description: str = "") -> bool:
         """Create a team in an organization"""
         data = {
             "name": team_name,
             "description": description,
-            "privacy": "closed"  
+            "privacy": "closed"  # Can be 'secret' or 'closed'
         }
         response = self.make_request("POST", f"/orgs/{org}/teams", data)
         if response:
             print(f"✅ Created team '{team_name}' in '{org}'")
             return True
         return False
- 
+
     def delete_team(self, org: str, team_slug: str) -> bool:
         """Delete a team from an organization"""
         response = self.make_request("DELETE", f"/orgs/{org}/teams/{team_slug}")
         if response is not None:
-            print(f"❌ Deleted team '{team_slug}' in '{org}'")
+            print(f"✅ Deleted team '{team_slug}' in '{org}'")
             return True
         return False
- 
+
     def add_team_to_repo(self, org: str, team_slug: str, repo: str, permission: str) -> bool:
         """Add team to repository with specific permission"""
         data = {"permission": permission}
@@ -107,7 +120,7 @@ class GitHubAPIManager:
             print(f"✅ Added team '{team_slug}' to repo '{repo}' with permission '{permission}'")
             return True
         return False
- 
+
     def remove_team_from_repo(self, org: str, team_slug: str, repo: str) -> bool:
         """Remove team from repository"""
         response = self.make_request("DELETE", f"/orgs/{org}/teams/{team_slug}/repos/{org}/{repo}")
@@ -115,7 +128,7 @@ class GitHubAPIManager:
             print(f"❌ Removed team '{team_slug}' from repo '{repo}'")
             return True
         return False
- 
+
     def add_user_to_team(self, org: str, team_slug: str, username: str) -> bool:
         """Add user to team"""
         response = self.make_request("PUT", f"/orgs/{org}/teams/{team_slug}/memberships/{username}")
@@ -123,7 +136,7 @@ class GitHubAPIManager:
             print(f"✅ Added user '{username}' to team '{team_slug}' in '{org}'")
             return True
         return False
- 
+
     def remove_user_from_team(self, org: str, team_slug: str, username: str) -> bool:
         """Remove user from team"""
         response = self.make_request("DELETE", f"/orgs/{org}/teams/{team_slug}/memberships/{username}")
@@ -131,7 +144,7 @@ class GitHubAPIManager:
             print(f"❌ Removed user '{username}' from team '{team_slug}' in '{org}'")
             return True
         return False
- 
+
     def create_repo(self, org: str, repo_name: str, private: bool = False, description: str = "") -> bool:
         """Create repository in organization"""
         data = {
@@ -148,34 +161,91 @@ class GitHubAPIManager:
             print(f"✅ Created {visibility} repo '{repo_name}' in '{org}'")
             return True
         return False
- 
-    def validate_user(self, username: str) -> bool:
-        """Validate if GitHub user exists"""
-        if "@" in username:
-            print(f"❌ Email detected: '{username}' — GitHub API requires the GitHub username instead.")
-            print("👉 Please enter the GitHub username (e.g. 'pirai-santhosh'), not the email address.")
-            return False
- 
-        response = self.make_request("GET", f"/users/{username}")
-        return response is not None
- 
+
+    def get_user_from_email(self, email: str, org: str = None) -> Optional[str]:
+        """
+        Attempt to get a GitHub username (login) from an email address.
+        This is challenging due to GitHub API limitations for privacy.
+        For users in an organization, it tries to list members and find public emails.
+        A PAT with 'read:org' scope is often required for listing org members.
+        """
+        if not email:
+            return None
+
+        print(f"Attempting to resolve GitHub username for email: {email}")
+
+        if org:
+            print(f"Searching for user with email '{email}' within organization '{org}'...")
+            all_members = []
+            page = 1
+            while True:
+                members_response = self.make_request("GET", f"/orgs/{org}/members?page={page}&per_page=100")
+                if members_response is None or not members_response:
+                    break
+                all_members.extend(members_response)
+                page += 1
+
+            for member in all_members:
+                user_profile = self.make_request("GET", f"/users/{member['login']}")
+                if user_profile and user_profile.get('email') and user_profile['email'].lower() == email.lower():
+                    print(f"Found organization member '{member['login']}' with matching public email.")
+                    return member['login']
+
+        print(f"❌ Could not resolve GitHub username for email: {email}. "
+              "User may not exist, email is private, or not an organization member (if org specified).")
+        return None
+
+    def validate_user_input(self, user_input: str, org: str = None) -> Optional[str]:
+        """
+        Validate if GitHub user exists or resolve email to username.
+        Returns the GitHub username (login) or None if invalid/unresolvable.
+        """
+        if "@" in user_input:
+            print(f"Email detected: '{user_input}'. Attempting to find GitHub username...")
+            resolved_username = self.get_user_from_email(user_input, org)
+            if resolved_username:
+                print(f"✅ Email '{user_input}' resolved to username '{resolved_username}'.")
+                return resolved_username
+            else:
+                print(f"❌ Could not resolve email '{user_input}' to a GitHub username.")
+                return None
+        else:
+            # Assume it's already a username, validate it directly
+            response = self.make_request("GET", f"/users/{user_input}")
+            if response is not None:
+                print(f"✅ GitHub username '{user_input}' is valid.")
+                return user_input
+            else:
+                print(f"❌ GitHub username '{user_input}' is invalid or does not exist.")
+                return None
+
     def get_user_repo_access(self, org: str, username: str) -> List[str]:
         """Get list of repositories user has access to in organization"""
         repos = self.list_repos(org)
         access_repos = []
- 
+
+        print(f"📆 Checking access for user '{username}' in organization '{org}'...")
         for repo in repos:
-            # Check if user is a collaborator
-            response = self.make_request("GET", f"/repos/{org}/{repo['name']}/collaborators/{username}")
-            if response is not None:
-                access_repos.append(repo['name'])
- 
-        print(f"📆 User '{username}' has access to {len(access_repos)} repositories in '{org}':")
-        for repo in access_repos:
-            print(f"  - {repo}")
-       
+            collaborator_response = self.make_request("GET", f"/repos/{org}/{repo['name']}/collaborators/{username}/permission")
+            if collaborator_response and 'permission' in collaborator_response:
+                access_repos.append(f"{repo['name']} (Direct: {collaborator_response['permission']})")
+                continue
+
+            user_teams = self.make_request("GET", f"/orgs/{org}/memberships/{username}/teams")
+            if user_teams:
+                for team_membership in user_teams:
+                    team_slug = team_membership['team']['slug']
+                    team_repo_permission = self.make_request("GET", f"/orgs/{org}/teams/{team_slug}/repos/{org}/{repo['name']}")
+                    if team_repo_permission and 'permission' in team_repo_permission:
+                        access_repos.append(f"{repo['name']} (Via team '{team_membership['team']['name']}': {team_repo_permission['permission']})")
+                        break
+
+        print(f"\n📆 User '{username}' has access to {len(access_repos)} repositories in '{org}':")
+        for repo_access_info in access_repos:
+            print(f"  - {repo_access_info}")
+        
         return access_repos
- 
+
     def get_team_by_name(self, org: str, team_name: str) -> Optional[dict]:
         """Find team by name and return team info"""
         teams = self.list_teams(org)
@@ -183,16 +253,146 @@ class GitHubAPIManager:
             if team['name'].lower() == team_name.lower():
                 return team
         return None
- 
+    
+    def list_users_with_details(self, org: str) -> List[dict]:
+        """List users (members) in an organization with their full profile details."""
+        all_members = []
+        page = 1
+        while True:
+            response = self.make_request("GET", f"/orgs/{org}/members?page={page}&per_page=100")
+            if response is None:
+                break
+            if not response:
+                break
+            all_members.extend(response)
+            page += 1
+        
+        users_details = []
+        print(f"📋 Fetching details for members in organization '{org}':")
+        for member in all_members:
+            user_info = self.make_request("GET", f"/users/{member['login']}")
+            if user_info:
+                users_details.append(user_info)
+                print(f"  - Fetched details for {member['login']}")
+            else:
+                print(f"  - Could not fetch details for {member['login']}")
+        return users_details
+
+    def generate_user_report_excel(self, org: str, file_path: str):
+        """
+        Generates an Excel report of all organization members with their details.
+        Requires 'read:org' scope for listing members and 'user' scope for public user details.
+        """
+        print(f"📊 Generating user report for organization '{org}' to '{file_path}'...")
+        users_details = self.list_users_with_details(org)
+
+        if not users_details:
+            print(f"⚠️ No user details found for '{org}'. Report will be empty.")
+            return
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = f"GitHub Users - {org}"
+
+        # Headers
+        headers = [
+            "Login", "Name", "Email", "Company", "Location", "Blog",
+            "Twitter Username", "Public Repos", "Followers", "Following",
+            "Created At", "Updated At", "Type", "Site Admin", "Bio"
+        ]
+        ws.append(headers)
+        
+        # Apply bold font to headers
+        for col_idx in range(1, len(headers) + 1):
+            cell = ws.cell(row=1, column=col_idx)
+            cell.font = Font(bold=True)
+
+        # Data rows
+        for user in users_details:
+            row_data = [
+                user.get('login', ''),
+                user.get('name', ''),
+                user.get('email', ''),
+                user.get('company', ''),
+                user.get('location', ''),
+                user.get('blog', ''),
+                user.get('twitter_username', ''),
+                user.get('public_repos', 0),
+                user.get('followers', 0),
+                user.get('following', 0),
+                user.get('created_at', ''),
+                user.get('updated_at', ''),
+                user.get('type', ''),
+                user.get('site_admin', False),
+                user.get('bio', '')
+            ]
+            ws.append(row_data)
+
+        try:
+            wb.save(file_path)
+            print(f"✅ User report saved to '{file_path}'")
+        except Exception as e:
+            print(f"❌ Failed to save Excel file: {e}")
+
+    def list_users_and_emails(self, org: str) -> None: # Renamed from list_users
+        """List users (members) in an organization with their public email if available."""
+        users_info = self.list_users_with_details(org) # Re-using the more detailed fetch
+        if users_info:
+            print(f"📋 Members in organization '{org}' (fetching public emails):")
+            for user_data in users_info:
+                email = user_data.get('email', 'N/A (Private/No Public Email)')
+                print(f"  - {user_data['login']} (Email: {email})")
+        else:
+            print(f"  No members found in organization '{org}'.")
+
+
+    def list_users_with_access(self, org: str) -> None:
+        """List users in an organization with their repo access levels"""
+        users_info = self.list_users_with_details(org) # Re-using the more detailed fetch
+        repos = self.list_repos(org)
+        print(f"\n📋 Users and their repository access in '{org}':")
+        for user_data in users_info:
+            user_login = user_data['login']
+            email = user_data.get('email', 'N/A')
+            print(f"\nUser: {user_login} (Email: {email})")
+            
+            user_has_access = False
+            for repo in repos:
+                collaborator_response = self.make_request("GET", f"/repos/{org}/{repo['name']}/collaborators/{user_login}/permission")
+                if collaborator_response and 'permission' in collaborator_response:
+                    print(f"  - {repo['name']}: {collaborator_response['permission']} (Direct)")
+                    user_has_access = True
+                else:
+                    user_teams = self.make_request("GET", f"/orgs/{org}/memberships/{user_login}/teams")
+                    if user_teams:
+                        for team_membership in user_teams:
+                            team_slug = team_membership['team']['slug']
+                            team_repo_permission = self.make_request("GET", f"/orgs/{org}/teams/{team_slug}/repos/{org}/{repo['name']}")
+                            if team_repo_permission and 'permission' in team_repo_permission:
+                                print(f"  - {repo['name']}: {team_repo_permission['permission']} (Team: {team_membership['team']['name']})")
+                                user_has_access = True
+                                break
+                    if not user_has_access: # Only print if no direct or team access found for THIS repo
+                        print(f"  - {repo['name']}: No Access")
+
+
 def run_action(args):
     github = GitHubAPIManager(github_token)
- 
+
+    resolved_username = None
+    if args.user:
+        resolved_username = github.validate_user_input(args.user, args.org)
+        if not resolved_username and args.action in ["add-user", "remove-user", "user-access"]:
+            print(f"❌ Action '{args.action}' requires a valid GitHub username, "
+                  f"but '{args.user}' could not be resolved.")
+            sys.exit(1)
+
     if args.action == "list-orgs":
         orgs = github.list_orgs()
         print("📋 Organizations:")
         for org in orgs:
             print(f"  - {org}")
- 
+
     elif args.action == "list-teams":
         teams = github.list_teams(args.org)
         print(f"📋 Teams in organization '{args.org}':")
@@ -201,7 +401,7 @@ def run_action(args):
                 print(f"  {i}. {team['name']} (ID: {team['id']}, Slug: {team['slug']})")
         else:
             print("  No teams found.")
- 
+
     elif args.action == "list-repos":
         repos = github.list_repos(args.org)
         print(f"📋 Repositories in organization '{args.org}':")
@@ -211,24 +411,23 @@ def run_action(args):
                 print(f"  {i}. {repo['name']} ({visibility})")
         else:
             print("  No repositories found.")
- 
+
     elif args.action == "create-team":
         if not args.team:
             print("--team is required for create-team")
             sys.exit(1)
         github.create_team(args.org, args.team)
- 
+
     elif args.action == "delete-team":
         if not args.team:
             print("--team is required for delete-team")
             sys.exit(1)
-        # Convert team name to slug if needed
         team_info = github.get_team_by_name(args.org, args.team)
         if team_info:
             github.delete_team(args.org, team_info['slug'])
         else:
             print(f"❌ Team '{args.team}' not found in '{args.org}'")
- 
+
     elif args.action == "add-repo":
         if not all([args.team, args.repo, args.permission]):
             print("--team, --repo, and --permission are required for add-repo")
@@ -238,7 +437,7 @@ def run_action(args):
             github.add_team_to_repo(args.org, team_info['slug'], args.repo, args.permission)
         else:
             print(f"❌ Team '{args.team}' not found in '{args.org}'")
- 
+
     elif args.action == "remove-repo":
         if not all([args.team, args.repo]):
             print("--team and --repo are required for remove-repo")
@@ -248,69 +447,85 @@ def run_action(args):
             github.remove_team_from_repo(args.org, team_info['slug'], args.repo)
         else:
             print(f"❌ Team '{args.team}' not found in '{args.org}'")
- 
+
     elif args.action in ["add-user", "remove-user"]:
-        if not all([args.team, args.user]):
-            print("--team and --user are required for user management")
+        if not all([args.team, resolved_username]):
+            print("--team and a valid user/email are required for user management")
             sys.exit(1)
- 
-        if not github.validate_user(args.user):
-            print(f"❌ Invalid GitHub username: {args.user}")
-            sys.exit(1)
- 
+
         team_info = github.get_team_by_name(args.org, args.team)
         if not team_info:
             print(f"❌ Team '{args.team}' not found in '{args.org}'")
             sys.exit(1)
- 
+
         if args.action == "add-user":
-            github.add_user_to_team(args.org, team_info['slug'], args.user)
+            github.add_user_to_team(args.org, team_info['slug'], resolved_username)
         else:
-            github.remove_user_from_team(args.org, team_info['slug'], args.user)
- 
+            github.remove_user_from_team(args.org, team_info['slug'], resolved_username)
+
     elif args.action == "create-repo":
         if not args.repo_name:
             print("--repo-name is required for create-repo")
             sys.exit(1)
         github.create_repo(args.org, args.repo_name, args.repo_private)
- 
+
     elif args.action == "user-access":
-        if not args.user:
-            print("--user is required for user-access")
+        if not resolved_username:
+            print("--user (email or username) is required for user-access")
             sys.exit(1)
-        github.get_user_repo_access(args.org, args.user)
- 
+        github.get_user_repo_access(args.org, resolved_username)
+
+    elif args.action == "list-users": # Renamed to list_users_and_emails
+        if not args.org:
+            print("--org is required for list-users")
+            sys.exit(1)
+        github.list_users_and_emails(args.org)
+    
+    elif args.action == "list-users-access":
+        if not args.org:
+            print("--org is required for list-users-access")
+            sys.exit(1)
+        github.list_users_with_access(args.org)
+
+    elif args.action == "generate-user-report": # New action to generate Excel report
+        if not args.org:
+            print("--org is required for generate-user-report")
+            sys.exit(1)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_file = f"github_users_{args.org}_{timestamp}.xlsx"
+        github.generate_user_report_excel(args.org, output_file)
+
 def main():
     parser = argparse.ArgumentParser(description="GitHub Team and Repo Manager (Direct API)")
-   
+    
     parser.add_argument("--action",
-                       choices=[
-                           "create-team", "delete-team", "add-repo", "remove-repo",
-                           "add-user", "remove-user", "create-repo", "user-access",
-                           "list-teams", "list-repos", "list-orgs"
-                       ],
-                       required=True,
-                       help="Action to perform")
-   
+                        choices=[
+                            "create-team", "delete-team", "add-repo", "remove-repo",
+                            "add-user", "remove-user", "create-repo", "user-access",
+                            "list-teams", "list-repos", "list-orgs", "list-users",
+                            "list-users-access", "generate-user-report" # Added new action
+                        ],
+                        required=True,
+                        help="Action to perform")
+    
     parser.add_argument("--org", help="GitHub organization name")
     parser.add_argument("--team", help="Team name")
     parser.add_argument("--repo", help="Repository name")
-    parser.add_argument("--user", help="GitHub username (not email!)")
+    parser.add_argument("--user", help="GitHub username or email address")
     parser.add_argument("--permission",
-                       choices=["pull", "triage", "push", "maintain", "admin"],
-                       help="Permission level for team access to repository")
+                        choices=["pull", "triage", "push", "maintain", "admin"],
+                        help="Permission level for team access to repository")
     parser.add_argument("--repo-private", action="store_true",
-                       help="Create repository as private (default is public)")
+                        help="Create repository as private (default is public)")
     parser.add_argument("--repo-name", help="Name for new repository")
- 
+
     args = parser.parse_args()
-   
-    # Check if org is required for the action
+    
     if args.action not in ["list-orgs"] and not args.org:
         print(f"--org is required for {args.action}")
         sys.exit(1)
-   
+    
     run_action(args)
- 
+
 if __name__ == "__main__":
     main()
