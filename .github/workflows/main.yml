@@ -16,17 +16,17 @@ on:
           - remove-user
           - create-repo
           - user-access
-          - list-orgs 
+          - list-orgs
           - list-teams
           - list-repos
-          - list-users 
-          - list-users-access 
+          - list-users
+          - list-users-access
 
       org:
         description: 'GitHub Organization (required for most actions)'
-        required: false 
-        type: string 
-        
+        required: false
+        type: string
+
       team:
         description: 'Team name (if applicable)'
         required: false
@@ -34,20 +34,20 @@ on:
 
       repo:
         description: 'Repository name (if applicable)'
-        required: false 
-        type: string 
-        
+        required: false
+        type: string
+
       user:
         description: 'GitHub username OR email address (e.g., "octocat" or "user@example.com")'
         required: false
-        type: string 
+        type: string
 
       permission:
         description: 'Permission level (if applicable)'
         required: false
         type: choice
         options:
-          - nil 
+          - nil
           - pull
           - triage
           - push
@@ -62,8 +62,8 @@ on:
       repo_private:
         description: 'Should repo be private? (for create-repo)'
         required: false
-        type: boolean 
-        default: 
+        type: boolean
+        default: false
 
 jobs:
   github-admin:
@@ -74,7 +74,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5 
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -84,19 +84,21 @@ jobs:
 
       - name: Run GitHub Admin Script
         env:
-          TOKEN: ${{ secrets.GITHUB_ADMIN_TOKEN }} 
+          TOKEN: ${{ secrets.GITHUB_ADMIN_TOKEN }}
           ACTION: ${{ github.event.inputs.action }}
           ORG: ${{ github.event.inputs.org }}
           TEAM: ${{ github.event.inputs.team }}
           REPO: ${{ github.event.inputs.repo }}
-          USER: ${{ github.event.inputs.user }} 
+          USER: ${{ github.event.inputs.user }}
           PERMISSION: ${{ github.event.inputs.permission }}
           REPO_NAME: ${{ github.event.inputs.repo_name }}
-          REPO_PRIVATE: ${{ github.event.inputs.repo_private }} 
+          REPO_PRIVATE: ${{ github.event.inputs.repo_private }}
+        run: |
+          CMD_ARGS="--action \"$ACTION\""
 
-       run: |
-      
-          CMD_ARGS="--action \"$ACTION\" --org \"$ORG\""
+          if [[ -n "$ORG" ]]; then
+            CMD_ARGS="$CMD_ARGS --org \"$ORG\""
+          fi
 
           if [[ -n "$TEAM" ]]; then
             CMD_ARGS="$CMD_ARGS --team \"$TEAM\""
