@@ -37,9 +37,10 @@ on:
         options: 
         - test-repo
 
-      user_email: 
-        description: 'User Email Address'
+      user: 
+        description: 'GitHub username (not email!)'
         required: false
+
 
       permission:
         description: 'Permission level (if applicable)'
@@ -88,17 +89,18 @@ jobs:
           ACTION: ${{ github.event.inputs.action }}
           ORG: ${{ github.event.inputs.org }}
           TEAM: ${{ github.event.inputs.team }}
+          USER: ${{ github.event.inputs.user }}
           REPO: ${{ github.event.inputs.repo }}          
           PERMISSION: ${{ github.event.inputs.permission }}
           REPO_NAME: ${{ github.event.inputs.repo_name }}
           REPO_PRIVATE: ${{ github.event.inputs.repo_private }}
-          USER_EMAIL_INPUT: ${{ github.event.inputs.user_email }}
+          
         run: |
           ARGS="--action \"$ACTION\" --org \"$ORG\""
 
           [[ -n "$TEAM" ]] && ARGS="$ARGS --team \"$TEAM\""
           [[ -n "$REPO" ]] && ARGS="$ARGS --repo \"$REPO\""
-          [[ -n "$USER" ]] && ARGS="$ARGS --user_email \"$USER_EMAIL_INPUT\""
+          [[ -n "$USER" ]] && ARGS="$ARGS --user \"$USER\""
           [[ "$PERMISSION" != "nil" && -n "$PERMISSION" ]] && ARGS="$ARGS --permission \"$PERMISSION\""
           [[ -n "$REPO_NAME" ]] && ARGS="$ARGS --repo-name \"$REPO_NAME\""
           [[ "$REPO_PRIVATE" == "true" ]] && ARGS="$ARGS --repo-private"
