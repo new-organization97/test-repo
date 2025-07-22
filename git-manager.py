@@ -4,15 +4,15 @@ import sys
 import json
 import os
 import dotenv
-from openpyxl import Workbook, load_workbook
-from openpyxl.styles import Font
+#from openpyxl import Workbook, load_workbook
+#from openpyxl.styles import Font
 from datetime import datetime
 from typing import List, Optional
  
  
 dotenv.load_dotenv()
  
-github_token = os.getenv("GITHUB_TOKEN")
+github_token = os.getenv("TOKEN")
 if not github_token:
     print("GITHUB_TOKEN environment variable is not set.")
     sys.exit(1)
@@ -184,27 +184,6 @@ class GitHubAPIManager:
                 return team
         return None
  
-    def list_users(self, org: str) -> List[str]:
-        """List users in an organization"""
-        response = self.make_request("GET", f"/orgs/{org}/members")
-        if response is None:
-            return []
-        return [user['login'] for user in response]
- 
-    def list_users_with_access(self, org: str) -> None:
-        """List users in an organization with their repo access levels"""
-        users = self.list_users(org)
-        repos = self.list_repos(org)
-        print(f"📋 Users and their repository access in '{org}':")
-        for user in users:
-            print(f"\nUser: {user}")
-            for repo in repos:
-                # Get permission level for user on repo
-                endpoint = f"/repos/{org}/{repo['name']}/collaborators/{user}/permission"
-                resp = self.make_request("GET", endpoint)
-                if resp and 'permission' in resp:
-                    print(f"  - {repo['name']}: {resp['permission']}")
- 
 def run_action(args):
     github = GitHubAPIManager(github_token)
  
@@ -301,15 +280,6 @@ def run_action(args):
             sys.exit(1)
         github.get_user_repo_access(args.org, args.user)
  
-    elif args.action == "list-users":
-        users = github.list_users(args.org)
-        print(f"📋 Users in organization '{args.org}':")
-        for user in users:
-            print(f"  - {user}")
- 
-    elif args.action == "list-users-access":
-        github.list_users_with_access(args.org)
- 
 def main():
     parser = argparse.ArgumentParser(description="GitHub Team and Repo Manager (Direct API)")
    
@@ -317,8 +287,7 @@ def main():
                        choices=[
                            "create-team", "delete-team", "add-repo", "remove-repo",
                            "add-user", "remove-user", "create-repo", "user-access",
-                           "list-teams", "list-repos", "list-orgs", "list-users",
-                           "list-users-access"
+                           "list-teams", "list-repos", "list-orgs"
                        ],
                        required=True,
                        help="Action to perform")
@@ -326,7 +295,7 @@ def main():
     parser.add_argument("--org", help="GitHub organization name")
     parser.add_argument("--team", help="Team name")
     parser.add_argument("--repo", help="Repository name")
-    parser.add_argument("--user", help="GitHub username")
+    parser.add_argument("--user", help="GitHub username (not email!)")
     parser.add_argument("--permission",
                        choices=["pull", "triage", "push", "maintain", "admin"],
                        help="Permission level for team access to repository")
