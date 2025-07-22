@@ -37,10 +37,9 @@ on:
         options: 
         - test-repo
 
-      user_email:
-        description: 'User email address'
+      user:
+        description: 'GitHub username (not email!)'
         required: false
-        type: string
 
       permission:
         description: 'Permission level (if applicable)'
