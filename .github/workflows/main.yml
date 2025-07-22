@@ -36,6 +36,8 @@ on:
         type: choice
         options: 
           - test-repo
+          - task-repo
+          - new-repo
         
 
       user: 
