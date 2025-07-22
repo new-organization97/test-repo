@@ -9,6 +9,8 @@ on:
         type: choice
         options:
           - create-team
+            - add-team-to-repo
+            - add-user-to-team
           - delete-team
           - add-repo
           - remove-repo
