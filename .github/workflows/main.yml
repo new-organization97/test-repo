@@ -25,13 +25,8 @@ on:
 
       org:
         description: 'GitHub Organization (required for most actions)'
-        required: true # Keeping as required for safety, but your script handles 'list-orgs'
+        required: true
         type: string
-        # You might want to populate these options dynamically or use string for free input
-        # options:
-        #   - new-organization97
-        #   - example-org
-        #   - another-org
 
       team:
         description: 'Team name (if applicable)'
@@ -42,8 +37,6 @@ on:
         description: 'Repository name (if applicable)'
         required: false
         type: string
-        # options:
-        # - test-repo # If you want to limit to specific repos, but `string` is more flexible
 
       user:
         description: 'GitHub username OR email address (e.g., "octocat" or "user@example.com")'
@@ -71,7 +64,7 @@ on:
         description: 'Should repo be private? (for create-repo)'
         required: false
         type: boolean
-        default: false # Ensure there's a default value for boolean inputs
+        default: false
 
 jobs:
   github-admin:
@@ -82,7 +75,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5 # Recommended to use v5 for latest features
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -92,7 +85,7 @@ jobs:
           pip install openpyxl # ✨ Add openpyxl to ensure it's installed
 
       - name: Run GitHub Admin Script
-        id: run_script # Add an ID to reference outputs
+        id: run_script
         env:
           TOKEN: ${{ secrets.TOKEN }} # Or ${{ secrets.GITHUB_ADMIN_TOKEN }} if you renamed it
           ACTION: ${{ github.event.inputs.action }}
@@ -103,36 +96,27 @@ jobs:
           PERMISSION: ${{ github.event.inputs.permission }}
           REPO_NAME: ${{ github.event.inputs.repo_name }}
           REPO_PRIVATE: ${{ github.event.inputs.repo_private }}
-
         run: |
+          # Start building the arguments for the Python script
+          # ACTION and ORG are typically always required, so start with them
+          CMD_ARGS="--action $ACTION --org $ORG"
 
-        CMD_ARGS="--action $ACTION --org $ORG" # <-- Changed here
+          # Conditionally add other arguments if their environment variables are not empty
+          if [[ -n "$TEAM" ]]; then
+            CMD_ARGS="$CMD_ARGS --team \"$TEAM\"" # Keep quotes for team name (might contain spaces)
+          fi
 
-  
-        if [[ -n "$TEAM" ]]; then
-          CMD_ARGS="$CMD_ARGS --team \"$TEAM\"" # Keep quotes for team name (might contain spaces)
-        fi
+          if [[ -n "$REPO" ]]; then
+            CMD_ARGS="$CMD_ARGS --repo \"$REPO\"" # Keep quotes for repo name (might contain spaces)
+          fi
 
-        if [[ -n "$REPO" ]]; then
-          CMD_ARGS="$CMD_ARGS --repo \"$REPO\"" # Keep quotes for repo name (might contain spaces)
-        fi
+          if [[ -n "$USER" ]]; then
+            CMD_ARGS="$CMD_ARGS --user \"$USER\"" # Keep quotes for username (though less common to have spaces, safer)
+          fi
 
-        if [[ -n "$USER" ]]; then
-          CMD_ARGS="$CMD_ARGS --user \"$USER\"" # Keep quotes for username (though less common to have spaces, safer)
-        fi
+          if [[ "$PERMISSION" != "nil" && -n "$PERMISSION" ]]; then
+            CMD_ARGS="$CMD_ARGS --permission \"$PERMISSION\"" # Keep quotes for permission (single word, but consistent)
+          fi
 
-  
-        if [[ "$PERMISSION" != "nil" && -n "$PERMISSION" ]]; then
-          CMD_ARGS="$CMD_ARGS --permission \"$PERMISSION\"" # Keep quotes for permission (single word, but consistent)
-        fi
-
-        if [[ -n "$REPO_NAME" ]]; then
-          CMD_ARGS="$CMD_ARGS --repo-name \"$REPO_NAME\"" # Keep quotes for repo name
-        fi
-
-        if [[ "$REPO_PRIVATE" == "true" ]]; then
-          CMD_ARGS="$CMD_ARGS --repo-private"
-        fi
-
-        echo "▶ Running script: python3 git-manager.py $CMD_ARGS"
-        python3 git-manager.py $CMD_ARGS
+          if [[ -n "$REPO_NAME" ]]; then
+            CMD_ARGS="$CMD_ARGS --repo-name \"$REPO_NAME\"" # Keep quotes for repo name
