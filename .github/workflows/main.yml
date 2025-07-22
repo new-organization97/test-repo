@@ -1,4 +1,4 @@
-name: GitHub Admin Tool
+lname: GitHub Admin Tool
 
 on:
   workflow_dispatch:
@@ -37,8 +37,8 @@ on:
         options: 
         - test-repo
 
-      user:
-        description: 'GitHub username (not email!)'
+      user_email:
+        description: 'User email address'
         required: false
 
       permission:
