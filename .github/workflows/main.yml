@@ -105,60 +105,34 @@ jobs:
           REPO_PRIVATE: ${{ github.event.inputs.repo_private }}
 
         run: |
-          # Build the argument string
-          CMD_ARGS="--action \"$ACTION\""
 
-          # Conditionally add --org based on the action and if it's provided
-          if [[ "$ACTION" != "list-orgs" && -n "$ORG" ]]; then
-            CMD_ARGS="$CMD_ARGS --org \"$ORG\""
-          elif [[ "$ACTION" == "generate-user-report" && -n "$ORG" ]]; then # org is explicitly required for generate-user-report
-            CMD_ARGS="$CMD_ARGS --org \"$ORG\""
-          fi
-          
-          if [[ -n "$TEAM" ]]; then
-            CMD_ARGS="$CMD_ARGS --team \"$TEAM\""
-          fi
-          
-          if [[ -n "$REPO" ]]; then
-            CMD_ARGS="$CMD_ARGS --repo \"$REPO\""
-          fi
+        CMD_ARGS="--action $ACTION --org $ORG" # <-- Changed here
 
-          if [[ -n "$USER" ]]; then
-            CMD_ARGS="$CMD_ARGS --user \"$USER\""
-          fi
+  
+        if [[ -n "$TEAM" ]]; then
+          CMD_ARGS="$CMD_ARGS --team \"$TEAM\"" # Keep quotes for team name (might contain spaces)
+        fi
 
-          if [[ "$PERMISSION" != "nil" && -n "$PERMISSION" ]]; then
-            CMD_ARGS="$CMD_ARGS --permission \"$PERMISSION\""
-          fi
+        if [[ -n "$REPO" ]]; then
+          CMD_ARGS="$CMD_ARGS --repo \"$REPO\"" # Keep quotes for repo name (might contain spaces)
+        fi
 
-          if [[ -n "$REPO_NAME" ]]; then
-            CMD_ARGS="$CMD_ARGS --repo-name \"$REPO_NAME\""
-          fi
+        if [[ -n "$USER" ]]; then
+          CMD_ARGS="$CMD_ARGS --user \"$USER\"" # Keep quotes for username (though less common to have spaces, safer)
+        fi
 
-          # For boolean flags, add only if true
-          if [[ "$REPO_PRIVATE" == "true" ]]; then
-            CMD_ARGS="$CMD_ARGS --repo-private"
-          fi
+  
+        if [[ "$PERMISSION" != "nil" && -n "$PERMISSION" ]]; then
+          CMD_ARGS="$CMD_ARGS --permission \"$PERMISSION\"" # Keep quotes for permission (single word, but consistent)
+        fi
 
-          echo "▶ Running script: python3 git-manager.py $CMD_ARGS"
-          # Run the Python script
-          python3 git-manager.py $CMD_ARGS
-          
-          # ✨ Capture the generated filename for artifact upload
-          # This assumes the script prints the filename to stdout, or you know the pattern.
-          # For robustness, you might want the python script to output the filename to a specific file
-          # or to a GitHub Actions output variable.
-          # For now, we'll assume a predictable filename format for 'generate-user-report'
-          if [[ "$ACTION" == "generate-user-report" && -n "$ORG" ]]; then
-            TIMESTAMP=$(date +"%Y%m%d_%H%M%S") # Replicate timestamp logic from Python
-            GENERATED_FILE="github_users_${ORG}_${TIMESTAMP}.xlsx"
-            echo "::set-output name=excel_file::${GENERATED_FILE}"
-          fi
+        if [[ -n "$REPO_NAME" ]]; then
+          CMD_ARGS="$CMD_ARGS --repo-name \"$REPO_NAME\"" # Keep quotes for repo name
+        fi
 
-      - name: Upload User Report Excel as Artifact
-        if: github.event.inputs.action == 'generate-user-report' # Only run if the action was 'generate-user-report'
-        uses: actions/upload-artifact@v4 # Recommended to use v4
-        with:
-          name: github-user-report-${{ github.event.inputs.org }}-${{ github.run_id }}
-          path: github_users_${{ github.event.inputs.org }}_*.xlsx # Match the wildcard pattern for dynamic filename
-          retention-days: 7 # How long to keep the artifact
+        if [[ "$REPO_PRIVATE" == "true" ]]; then
+          CMD_ARGS="$CMD_ARGS --repo-private"
+        fi
+
+        echo "▶ Running script: python3 git-manager.py $CMD_ARGS"
+        python3 git-manager.py $CMD_ARGS
