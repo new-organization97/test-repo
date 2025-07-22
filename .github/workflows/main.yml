@@ -16,38 +16,38 @@ on:
           - remove-user
           - create-repo
           - user-access
+          - list-orgs 
+          - list-teams
+          - list-repos
+          - list-users 
+          - list-users-access 
 
       org:
-        description: 'GitHub Organization'
-        required: true
-        type: choice
-        options:
-          - new-organization97
-          - example-org
-          - another-org
-
+        description: 'GitHub Organization (required for most actions)'
+        required: false 
+        type: string 
+        
       team:
         description: 'Team name (if applicable)'
         required: false
+        type: string
 
       repo:
         description: 'Repository name (if applicable)'
-        required: true
-        type: choice
-        options: 
-        - test-repo
-
-      user: 
-        description: 'GitHub username (not email!)'
+        required: false 
+        type: string 
+        
+      user:
+        description: 'GitHub username OR email address (e.g., "octocat" or "user@example.com")'
         required: false
-
+        type: string 
 
       permission:
         description: 'Permission level (if applicable)'
         required: false
         type: choice
         options:
-          - nil
+          - nil 
           - pull
           - triage
           - push
@@ -57,14 +57,13 @@ on:
       repo_name:
         description: 'New repo name (for create-repo)'
         required: false
+        type: string
 
       repo_private:
-        description: 'Should repo be private?'
+        description: 'Should repo be private? (for create-repo)'
         required: false
-        type: choice
-        options:
-          - "false"
-          - "true"
+        type: boolean 
+        default: 
 
 jobs:
   github-admin:
@@ -75,36 +74,57 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5 
         with:
           python-version: '3.11'
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt || true
+          pip install -r requirements.txt
 
       - name: Run GitHub Admin Script
         env:
-          TOKEN: ${{ secrets.TOKEN }}
+          TOKEN: ${{ secrets.GITHUB_ADMIN_TOKEN }} 
           ACTION: ${{ github.event.inputs.action }}
           ORG: ${{ github.event.inputs.org }}
           TEAM: ${{ github.event.inputs.team }}
-          USER: ${{ github.event.inputs.user }}
-          REPO: ${{ github.event.inputs.repo }}          
+          REPO: ${{ github.event.inputs.repo }}
+          USER: ${{ github.event.inputs.user }} 
           PERMISSION: ${{ github.event.inputs.permission }}
           REPO_NAME: ${{ github.event.inputs.repo_name }}
-          REPO_PRIVATE: ${{ github.event.inputs.repo_private }}
-          
+          REPO_PRIVATE: ${{ github.event.inputs.repo_private }} 
+
         run: |
-          ARGS="--action \"$ACTION\" --org \"$ORG\""
+          
+          ARGS="--action \"$ACTION\""
+          
+          
+            ARGS="$ARGS --org \"$ORG\""
+          fi
 
-          [[ -n "$TEAM" ]] && ARGS="$ARGS --team \"$TEAM\""
-          [[ -n "$REPO" ]] && ARGS="$ARGS --repo \"$REPO\""
-          [[ -n "$USER" ]] && ARGS="$ARGS --user \"$USER\""
-          [[ "$PERMISSION" != "nil" && -n "$PERMISSION" ]] && ARGS="$ARGS --permission \"$PERMISSION\""
-          [[ -n "$REPO_NAME" ]] && ARGS="$ARGS --repo-name \"$REPO_NAME\""
-          [[ "$REPO_PRIVATE" == "true" ]] && ARGS="$ARGS --repo-private"
+          if [[ -n "$TEAM" ]]; then
+            ARGS="$ARGS --team \"$TEAM\""
+          fi
+          
+          if [[ -n "$REPO" ]]; then
+            ARGS="$ARGS --repo \"$REPO\""
+          fi
 
-          echo "▶ Running script: python3 scripts/github_admin.py $ARGS"
-          eval python3 git-manager.py $ARGS
- 
+          if [[ -n "$USER" ]]; then
+            ARGS="$ARGS --user \"$USER\""
+          fi
+
+          if [[ "$PERMISSION" != "nil" && -n "$PERMISSION" ]]; then
+            ARGS="$ARGS --permission \"$PERMISSION\""
+          fi
+
+          if [[ -n "$REPO_NAME" ]]; then
+            ARGS="$ARGS --repo-name \"$REPO_NAME\""
+          fi
+
+          if [[ "$REPO_PRIVATE" == "true" ]]; then
+            ARGS="$ARGS --repo-private"
+          fi
+
+          echo "▶ Running script: python3 git-manager.py $ARGS"
+          python3 git-manager.py $ARGS
