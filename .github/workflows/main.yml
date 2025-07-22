@@ -1,4 +1,4 @@
-lname: GitHub Admin Tool
+name: GitHub Admin Tool
 
 on:
   workflow_dispatch:
