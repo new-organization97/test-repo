@@ -34,7 +34,8 @@ on:
         description: 'Repository name (if applicable)'
         required: true
         type: choice
-        - test-repo
+        options: 
+          - test-repo
         
 
       user: 
