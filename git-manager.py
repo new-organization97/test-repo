@@ -12,7 +12,7 @@ from typing import List, Optional
  
 dotenv.load_dotenv()
  
-github_token = os.getenv("GITHUB_TOKEN")
+github_token = os.getenv("TOKEN")
 if not github_token:
     print("GITHUB_TOKEN environment variable is not set.")
     sys.exit(1)
