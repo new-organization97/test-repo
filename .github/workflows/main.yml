@@ -98,7 +98,7 @@ jobs:
 
           [[ -n "$TEAM" ]] && ARGS="$ARGS --team \"$TEAM\""
           [[ -n "$REPO" ]] && ARGS="$ARGS --repo \"$REPO\""
-          [[ -n "$USER" ]] && ARGS="$ARGS --user \"$USER\""
+          [[ -n "$USER" ]] && ARGS="$ARGS --user_email \"$USER_EMAIL_INPUT\""
           [[ "$PERMISSION" != "nil" && -n "$PERMISSION" ]] && ARGS="$ARGS --permission \"$PERMISSION\""
           [[ -n "$REPO_NAME" ]] && ARGS="$ARGS --repo-name \"$REPO_NAME\""
           [[ "$REPO_PRIVATE" == "true" ]] && ARGS="$ARGS --repo-private"
