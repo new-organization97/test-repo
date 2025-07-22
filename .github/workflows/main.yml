@@ -94,37 +94,33 @@ jobs:
           REPO_NAME: ${{ github.event.inputs.repo_name }}
           REPO_PRIVATE: ${{ github.event.inputs.repo_private }} 
 
-        run: |
-          
-          ARGS="--action \"$ACTION\""
-          
-          
-            ARGS="$ARGS --org \"$ORG\""
-          fi
+       run: |
+      
+          CMD_ARGS="--action \"$ACTION\" --org \"$ORG\""
 
           if [[ -n "$TEAM" ]]; then
-            ARGS="$ARGS --team \"$TEAM\""
+            CMD_ARGS="$CMD_ARGS --team \"$TEAM\""
           fi
-          
+
           if [[ -n "$REPO" ]]; then
-            ARGS="$ARGS --repo \"$REPO\""
+            CMD_ARGS="$CMD_ARGS --repo \"$REPO\""
           fi
 
           if [[ -n "$USER" ]]; then
-            ARGS="$ARGS --user \"$USER\""
+            CMD_ARGS="$CMD_ARGS --user \"$USER\""
           fi
 
           if [[ "$PERMISSION" != "nil" && -n "$PERMISSION" ]]; then
-            ARGS="$ARGS --permission \"$PERMISSION\""
+            CMD_ARGS="$CMD_ARGS --permission \"$PERMISSION\""
           fi
 
           if [[ -n "$REPO_NAME" ]]; then
-            ARGS="$ARGS --repo-name \"$REPO_NAME\""
+            CMD_ARGS="$CMD_ARGS --repo-name \"$REPO_NAME\""
           fi
 
           if [[ "$REPO_PRIVATE" == "true" ]]; then
-            ARGS="$ARGS --repo-private"
+            CMD_ARGS="$CMD_ARGS --repo-private"
           fi
 
-          echo "▶ Running script: python3 git-manager.py $ARGS"
-          python3 git-manager.py $ARGS
+          echo "▶ Running script: python3 git-manager.py $CMD_ARGS"
+          python3 git-manager.py $CMD_ARGS
