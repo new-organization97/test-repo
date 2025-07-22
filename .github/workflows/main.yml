@@ -16,31 +16,39 @@ on:
           - remove-user
           - create-repo
           - user-access
+          - list-orgs
+          - list-teams
+          - list-repos
+          - list-users
+          - list-users-access
+          - generate-user-report # ✨ New action for Excel report
 
       org:
-        description: 'GitHub Organization'
-        required: true
-        type: choice
-        options:
-          - new-organization97
-          - example-org
-          - another-org
+        description: 'GitHub Organization (required for most actions)'
+        required: true # Keeping as required for safety, but your script handles 'list-orgs'
+        type: string
+        # You might want to populate these options dynamically or use string for free input
+        # options:
+        #   - new-organization97
+        #   - example-org
+        #   - another-org
 
       team:
         description: 'Team name (if applicable)'
         required: false
+        type: string
 
       repo:
         description: 'Repository name (if applicable)'
-        required: true
-        type: choice
-        options: 
-        - test-repo
-
-      user: 
-        description: 'GitHub username (not email!)'
         required: false
+        type: string
+        # options:
+        # - test-repo # If you want to limit to specific repos, but `string` is more flexible
 
+      user:
+        description: 'GitHub username OR email address (e.g., "octocat" or "user@example.com")'
+        required: false
+        type: string
 
       permission:
         description: 'Permission level (if applicable)'
@@ -57,14 +65,13 @@ on:
       repo_name:
         description: 'New repo name (for create-repo)'
         required: false
+        type: string
 
       repo_private:
-        description: 'Should repo be private?'
+        description: 'Should repo be private? (for create-repo)'
         required: false
-        type: choice
-        options:
-          - "false"
-          - "true"
+        type: boolean
+        default: false # Ensure there's a default value for boolean inputs
 
 jobs:
   github-admin:
@@ -75,36 +82,83 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5 # Recommended to use v5 for latest features
         with:
           python-version: '3.11'
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt || true
+          pip install -r requirements.txt
+          pip install openpyxl # ✨ Add openpyxl to ensure it's installed
 
       - name: Run GitHub Admin Script
+        id: run_script # Add an ID to reference outputs
         env:
-          TOKEN: ${{ secrets.TOKEN }}
+          TOKEN: ${{ secrets.TOKEN }} # Or ${{ secrets.GITHUB_ADMIN_TOKEN }} if you renamed it
           ACTION: ${{ github.event.inputs.action }}
           ORG: ${{ github.event.inputs.org }}
           TEAM: ${{ github.event.inputs.team }}
           USER: ${{ github.event.inputs.user }}
-          REPO: ${{ github.event.inputs.repo }}          
+          REPO: ${{ github.event.inputs.repo }}
           PERMISSION: ${{ github.event.inputs.permission }}
           REPO_NAME: ${{ github.event.inputs.repo_name }}
           REPO_PRIVATE: ${{ github.event.inputs.repo_private }}
-          
+
         run: |
-          ARGS="--action \"$ACTION\" --org \"$ORG\""
+          # Build the argument string
+          CMD_ARGS="--action \"$ACTION\""
 
-          [[ -n "$TEAM" ]] && ARGS="$ARGS --team \"$TEAM\""
-          [[ -n "$REPO" ]] && ARGS="$ARGS --repo \"$REPO\""
-          [[ -n "$USER" ]] && ARGS="$ARGS --user \"$USER\""
-          [[ "$PERMISSION" != "nil" && -n "$PERMISSION" ]] && ARGS="$ARGS --permission \"$PERMISSION\""
-          [[ -n "$REPO_NAME" ]] && ARGS="$ARGS --repo-name \"$REPO_NAME\""
-          [[ "$REPO_PRIVATE" == "true" ]] && ARGS="$ARGS --repo-private"
+          # Conditionally add --org based on the action and if it's provided
+          if [[ "$ACTION" != "list-orgs" && -n "$ORG" ]]; then
+            CMD_ARGS="$CMD_ARGS --org \"$ORG\""
+          elif [[ "$ACTION" == "generate-user-report" && -n "$ORG" ]]; then # org is explicitly required for generate-user-report
+            CMD_ARGS="$CMD_ARGS --org \"$ORG\""
+          fi
+          
+          if [[ -n "$TEAM" ]]; then
+            CMD_ARGS="$CMD_ARGS --team \"$TEAM\""
+          fi
+          
+          if [[ -n "$REPO" ]]; then
+            CMD_ARGS="$CMD_ARGS --repo \"$REPO\""
+          fi
 
-          echo "▶ Running script: python3 scripts/github_admin.py $ARGS"
-          eval python3 git-manager.py $ARGS
- 
+          if [[ -n "$USER" ]]; then
+            CMD_ARGS="$CMD_ARGS --user \"$USER\""
+          fi
+
+          if [[ "$PERMISSION" != "nil" && -n "$PERMISSION" ]]; then
+            CMD_ARGS="$CMD_ARGS --permission \"$PERMISSION\""
+          fi
+
+          if [[ -n "$REPO_NAME" ]]; then
+            CMD_ARGS="$CMD_ARGS --repo-name \"$REPO_NAME\""
+          fi
+
+          # For boolean flags, add only if true
+          if [[ "$REPO_PRIVATE" == "true" ]]; then
+            CMD_ARGS="$CMD_ARGS --repo-private"
+          fi
+
+          echo "▶ Running script: python3 git-manager.py $CMD_ARGS"
+          # Run the Python script
+          python3 git-manager.py $CMD_ARGS
+          
+          # ✨ Capture the generated filename for artifact upload
+          # This assumes the script prints the filename to stdout, or you know the pattern.
+          # For robustness, you might want the python script to output the filename to a specific file
+          # or to a GitHub Actions output variable.
+          # For now, we'll assume a predictable filename format for 'generate-user-report'
+          if [[ "$ACTION" == "generate-user-report" && -n "$ORG" ]]; then
+            TIMESTAMP=$(date +"%Y%m%d_%H%M%S") # Replicate timestamp logic from Python
+            GENERATED_FILE="github_users_${ORG}_${TIMESTAMP}.xlsx"
+            echo "::set-output name=excel_file::${GENERATED_FILE}"
+          fi
+
+      - name: Upload User Report Excel as Artifact
+        if: github.event.inputs.action == 'generate-user-report' # Only run if the action was 'generate-user-report'
+        uses: actions/upload-artifact@v4 # Recommended to use v4
+        with:
+          name: github-user-report-${{ github.event.inputs.org }}-${{ github.run_id }}
+          path: github_users_${{ github.event.inputs.org }}_*.xlsx # Match the wildcard pattern for dynamic filename
+          retention-days: 7 # How long to keep the artifact
