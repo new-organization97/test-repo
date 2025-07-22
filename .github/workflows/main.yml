@@ -34,8 +34,6 @@ on:
         description: 'Repository name (if applicable)'
         required: true
         type: choice
-        options: 
-        - test-repo
 
       user: 
         description: 'GitHub username (not email!)'
