@@ -37,8 +37,8 @@ on:
         options: 
         - test-repo
 
-      user:
-        description: 'GitHub username (not email!)'
+      user_email: 
+        description: 'User Email Address'
         required: false
 
       permission:
@@ -88,11 +88,11 @@ jobs:
           ACTION: ${{ github.event.inputs.action }}
           ORG: ${{ github.event.inputs.org }}
           TEAM: ${{ github.event.inputs.team }}
-          REPO: ${{ github.event.inputs.repo }}
-          USER: ${{ github.event.inputs.user }}
+          REPO: ${{ github.event.inputs.repo }}          
           PERMISSION: ${{ github.event.inputs.permission }}
           REPO_NAME: ${{ github.event.inputs.repo_name }}
           REPO_PRIVATE: ${{ github.event.inputs.repo_private }}
+          USER_EMAIL_INPUT: ${{ github.event.inputs.user_email }}
         run: |
           ARGS="--action \"$ACTION\" --org \"$ORG\""
 
