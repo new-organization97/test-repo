@@ -120,3 +120,4 @@ jobs:
 
           if [[ -n "$REPO_NAME" ]]; then
             CMD_ARGS="$CMD_ARGS --repo-name \"$REPO_NAME\"" # Keep quotes for repo name
+          fi
