@@ -40,6 +40,7 @@ on:
       user_email:
         description: 'User email address'
         required: false
+        type: string
 
       permission:
         description: 'Permission level (if applicable)'
