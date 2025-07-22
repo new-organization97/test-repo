@@ -123,4 +123,4 @@ jobs:
           fi
 
           echo "▶ Running script: python3 git-manager.py $CMD_ARGS"
-          python3 git-manager.py $CMD_ARGS
+          eval python3 git-manager.py $CMD_ARGS
