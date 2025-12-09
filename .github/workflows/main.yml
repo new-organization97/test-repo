@@ -106,5 +106,13 @@ jobs:
           echo "▶ Running script: python3 scripts/github_admin.py $ARGS"
           eval python3 git-manager.py $ARGS
 
-      - name: Run Gitleaks (Secrets Scan)
-        uses: gitleaks/gitleaks-action@v2
+      - name: Install and Run Gitleaks (Open Source)
+        run: |
+          curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest \
+          | grep "browser_download_url.*linux_amd64\." \
+          | cut -d '"' -f 4 \
+          | wget -qi -
+          mv gitleaks_*_linux_amd64 gitleaks
+          chmod +x gitleaks
+         ./gitleaks detect --source . --no-banner --verbose --redact
+
