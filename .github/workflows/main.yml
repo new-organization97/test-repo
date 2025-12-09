@@ -105,3 +105,6 @@ jobs:
 
           echo "▶ Running script: python3 scripts/github_admin.py $ARGS"
           eval python3 git-manager.py $ARGS
+
+      - name: Run Gitleaks (Secrets Scan)
+        uses: gitleaks/gitleaks-action@v2
