@@ -109,7 +109,7 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Install and Run Gitleaks (Open Source)
+      - name: Install and Run Gitleaks 
         run: |
           echo "⬇️ Fetching latest Gitleaks release tag..."
           LATEST=$(curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest | jq -r '.tag_name')
