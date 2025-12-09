@@ -106,19 +106,26 @@ jobs:
           echo "▶ Running script: python3 scripts/github_admin.py $ARGS"
           eval python3 git-manager.py $ARGS
 
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Install and Run Gitleaks (Open Source)
         run: |
-          echo "⬇️ Downloading Gitleaks OSS..."
+          echo "⬇️ Fetching latest Gitleaks release tag..."
+          LATEST=$(curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest | jq -r '.tag_name')
 
-          LATEST=$(curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest | grep "tag_name" | cut -d '"' -f 4)
-          wget -q https://github.com/gitleaks/gitleaks/releases/download/$LATEST/gitleaks_${LATEST#v}_linux_amd64.tar.gz
+          echo "📥 Downloading Gitleaks $LATEST..."
+          wget -q https://github.com/gitleaks/gitleaks/releases/download/$LATEST/gitleaks_${LATEST#v}_linux_amd64.tar.gz -O gitleaks.tar.gz
 
           echo "📦 Extracting..."
-          tar -xzf gitleaks_*_linux_amd64.tar.gz
+          tar -xzf gitleaks.tar.gz
 
-          chmod +x gitleaks
+          mv gitleaks /usr/local/bin/
+          chmod +x /usr/local/bin/gitleaks
+
           echo "🔍 Running Gitleaks scan..."
-          ./gitleaks detect --source . --no-banner --verbose --redact
+          gitleaks detect --source . --no-banner --verbose --redact
+
 
 
 
