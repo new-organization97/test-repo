@@ -108,11 +108,17 @@ jobs:
 
       - name: Install and Run Gitleaks (Open Source)
         run: |
+          echo "⬇️ Downloading Gitleaks..."
           curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest \
           | grep "browser_download_url.*linux_amd64\." \
           | cut -d '"' -f 4 \
           | wget -qi -
+    
+          echo "📦 Installing Gitleaks..."
           mv gitleaks_*_linux_amd64 gitleaks
           chmod +x gitleaks
-         ./gitleaks detect --source . --no-banner --verbose --redact
+
+          echo "🔍 Running Gitleaks scan..."
+          ./gitleaks detect --source . --no-banner --verbose --redact
+
 
