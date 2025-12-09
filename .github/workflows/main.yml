@@ -114,17 +114,20 @@ jobs:
           echo "⬇️ Fetching latest Gitleaks release tag..."
           LATEST=$(curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest | jq -r '.tag_name')
 
+          VERSION=${LATEST#v}
+    
           echo "📥 Downloading Gitleaks $LATEST..."
-          wget -q https://github.com/gitleaks/gitleaks/releases/download/$LATEST/gitleaks_${LATEST#v}_linux_amd64.tar.gz -O gitleaks.tar.gz
+          wget -q "https://github.com/gitleaks/gitleaks/releases/download/$LATEST/gitleaks_${VERSION}_linux_x64.tar.gz" -O gitleaks.tar.gz
 
           echo "📦 Extracting..."
           tar -xzf gitleaks.tar.gz
 
-          mv gitleaks /usr/local/bin/
-          chmod +x /usr/local/bin/gitleaks
+          chmod +x gitleaks
+          sudo mv gitleaks /usr/local/bin/
 
           echo "🔍 Running Gitleaks scan..."
           gitleaks detect --source . --no-banner --verbose --redact
+
 
 
 
